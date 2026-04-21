@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MartVV - Stock Analysis App</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;700&display=swap">
+  <!-- Add Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/moment"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment"></script>
+  <style>
+    :root {
+      --primary-color: #2196f3;
+      --bg-color: #0b1120;
+      --panel-color: #1e293b;
+      --input-bg: #0f172a;
+      --border-color: #334155;
+      --text-muted: #94a3b8;
+      --text-color: #f8fafc;
+      --success: #00e676;
+      --danger: #ff5252;
+    }
+    [data-theme="light"] {
+      --primary-color: #1a73e8;
+      --bg-color: #f4f7fc;
+      --panel-color: #ffffff;
+      --input-bg: #e8eef7;
+      --border-color: #cbd5e1;
+      --text-muted: #64748b;
+      --text-color: #1e293b;
+      --success: #2e7d32;
+      --danger: #c62828;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .top-bar {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: var(--panel-color);
+      padding: 15px 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: bold;
+      color: var(--primary-color);
+      letter-spacing: 1px;
+    }
+
+    .top-icons {
+      display: flex;
+      gap: 20px;
+      font-size: 18px;
+    }
+
+    .top-icons span {
+      cursor: pointer;
+      color: var(--text-color);
+      transition: color 0.2s ease;
+    }
+
+    .top-icons span:hover {
+      color: var(--primary-color);
+    }
+
+    .container {
+      padding: 30px 20px;
+      max-width: 1400px;
+      margin: auto;
+    }
+
+    h1 {
+      color: var(--primary-color);
+      font-size: 2.5em;
+      margin-bottom: 0;
+    }
+
+    .tagline {
+      font-style: italic;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+    .search-section {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    textarea {
+      flex: 1 1 200px;
+      padding: 10px;
+      font-size: 16px;
+      background-color: var(--panel-color);
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      border-radius: 6px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #42a5f5;
+    }
+
+    .main-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    #watchlist,
+    #annotation-panel {
+      flex: 1 1 260px;
+      background-color: var(--panel-color);
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    .watch-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--input-bg);
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      color: var(--text-color);
+      transition: background 0.3s ease, color 0.3s ease;
+      border: 1px solid var(--border-color);
+    }
+
+    .watch-item:hover {
+      background-color: var(--border-color);
+      color: var(--primary-color);
+    }
+
+    .price-block {
+      text-align: right;
+    }
+
+    .price-block .up {
+      color: var(--success);
+    }
+
+    .price-block .down {
+      color: var(--danger);
+    }
+
+    #chart-area {
+      flex: 3 1 700px;
+      background-color: var(--panel-color);
+      border-radius: 8px;
+      padding: 10px;
+      border: 1px solid var(--border-color);
+    }
+
+    .panel-box {
+      background-color: var(--panel-color);
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border-color);
+    }
+
+    .error {
+      color: var(--danger);
+      margin-top: 10px;
+    }
+
+    @media (max-width: 900px) {
+      .main-grid {
+        flex-direction: column;
+      }
+      .top-icons {
+        gap: 10px;
+        font-size: 16px;
+      }
+    }
+
+    .theme-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: var(--panel-color);
+      color: var(--text-color);
+      padding: 10px 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      z-index: 1001;
+      border: 1px solid var(--border-color);
+    }
+    
+    /* Updated prediction style */
+    .prediction-result {
+      font-size: 1.2em;
+      padding: 15px;
+      background: var(--panel-color);
+      border-radius: 8px;
+      margin: 20px 0;
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+    }
+    .prediction-result strong {
+      font-size: 1.3em;
+    }
+    .trend-indicator {
+      font-size: 1.5em;
+      vertical-align: middle;
+    }
+	.top-icon {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      color: var(--text-color);
+      transition: color 0.2s ease;
+      padding: 5px 10px;
+      border-radius: 4px;
+    }
+
+    .top-icon:hover {
+      color: var(--primary-color);
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .top-icon .icon {
+      font-size: 18px;
+    }
+
+    .top-icon .label {
+      font-size: 14px;
+      display: none;
+    }
+
+    @media (min-width: 768px) {
+      .top-icon .label {
+        display: inline;
+      }
+    }
+    /* Footer styles - Add this without changing anything else */
+    .educational-footer {
+      padding: 20px;
+      text-align: center;
+      color: var(--text-muted);
+      margin-top: 40px;
+      border-top: 1px solid var(--border-color);
+      background-color: var(--panel-color);
+    }
+
+    .educational-footer p {
+      max-width: 800px;
+      margin: 10px auto;
+      line-height: 1.5;
+    }
+
+    .educational-footer .checkbox {
+      margin-top: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    /* Refresh button styles */
+    .refresh-button {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 8px 15px;
+      background-color: var(--panel-color);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 1px solid var(--border-color);
+    }
+
+    .refresh-button:hover {
+      background-color: var(--primary-color);
+    }
+
+    .refresh-button .icon {
+      transition: transform 0.5s ease;
+    }
+
+    .refresh-button.active .icon {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Auto-refresh toggle */
+    .auto-refresh-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .auto-refresh-toggle label {
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .auto-refresh-toggle input[type="checkbox"] {
+      cursor: pointer;
+    }
+
+    /* Updated Market Overview Styles */
+    .market-overview {
+      background-color: var(--panel-color);
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      border: 1px solid var(--border-color);
+    }
+
+    .market-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .market-title {
+      font-size: 18px;
+      color: var(--primary-color);
+      font-weight: bold;
+    }
+
+    .market-time {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .market-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
+    }
+
+    .market-item {
+      display: flex;
+      flex-direction: column;
+      padding: 12px;
+      background-color: var(--input-bg);
+      border-radius: 6px;
+      transition: transform 0.2s ease;
+      border: 1px solid var(--border-color);
+    }
+
+    .market-item:hover {
+      transform: translateY(-3px);
+    }
+
+    .market-name {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+    }
+
+    .market-value {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 3px;
+      color: var(--text-color);
+    }
+
+    .market-change {
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+    }
+
+    .market-change.up {
+      color: var(--success);
+    }
+
+    .market-change.down {
+      color: var(--danger);
+    }
+
+    .change-icon {
+      margin-right: 5px;
+      font-size: 12px;
+    }
+
+    .market-sector {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 5px;
+    }
+
+    @media (max-width: 768px) {
+      .market-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .market-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    /* Signal boxes */
+    .signal-box {
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      font-weight: bold;
+      color: var(--text-color);
+    }
+    
+    .buy-signal {
+      background-color: var(--success);
+      background-color: rgba(0, 230, 118, 0.2);
+      border-left: 4px solid var(--success);
+    }
+    
+    .sell-signal {
+      background-color: var(--danger);
+      background-color: rgba(255, 82, 82, 0.2);
+      border-left: 4px solid var(--danger);
+    }
+    
+    .note-signal {
+      background-color: var(--primary-color);
+      background-color: rgba(33, 150, 243, 0.2);
+      border-left: 4px solid var(--primary-color);
+    }
+    
+    /* Trade panel specific styles */
+    .trade-panel {
+      background-color: var(--panel-color);
+      border-radius: 8px;
+      padding: 15px;
+      border: 1px solid var(--border-color);
+    }
+    
+    .trade-input-group {
+      margin-bottom: 15px;
+    }
+    
+    .trade-input-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    
+    .trade-input-group input {
+      width: 100%;
+      padding: 10px;
+      background-color: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-color);
+    }
+    
+    .trade-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    
+    .trade-buttons button {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    .buy-button {
+      background-color: var(--success) !important;
+    }
+    
+    .sell-button {
+      background-color: var(--danger) !important;
+    }
+    
+    .trade-result {
+      margin-top: 15px;
+      padding: 10px;
+      text-align: center;
+      border-radius: 6px;
+      background-color: var(--input-bg);
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+    }
+    
+    /* Prediction controls */
+    .prediction-controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      align-items: center;
+    }
+    
+    .prediction-controls label {
+      white-space: nowrap;
+      color: var(--text-muted);
+    }
+    
+    /* Forecast chart container */
+    .forecast-chart-container {
+      margin-top: 20px;
+      height: 300px;
+      position: relative;
+    }
+    
+    .prediction-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+    
+    .prediction-detail-card {
+      background-color: var(--input-bg);
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+    
+    .prediction-detail-card h4 {
+      margin-top: 0;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    
+    .prediction-detail-card p {
+      margin-bottom: 0;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    
+    .confidence-meter {
+      height: 6px;
+      background-color: var(--panel-color);
+      border-radius: 3px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+    
+    .confidence-level {
+      height: 100%;
+      background: linear-gradient(90deg, var(--danger), var(--success));
+    }
+
+    /* Forecast table styles */
+    .forecast-table-container {
+      color: var(--text-color);
+      background-color: var(--panel-color);
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      border: 1px solid var(--border-color);
+    }
+
+    .forecast-table-container table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      color: var(--text-color);
+    }
+
+    .forecast-table-container th,
+    .forecast-table-container td {
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .forecast-table-container th {
+      color: var(--primary-color);
+      font-weight: bold;
+    }
+
+    .forecast-table-container tr:hover {
+      background-color: var(--input-bg);
+    }
+
+    /* Chart.js specific styles */
+    #forecastChart {
+      color: var(--text-color);
+    }
+
+    .chartjs-render-monitor {
+      color: var(--text-color) !important;
+    }
+
+    .chartjs-grid line {
+      stroke: var(--border-color);
+    }
+
+    .chartjs-tooltip {
+      background-color: var(--panel-color) !important;
+      border-color: var(--border-color) !important;
+      color: var(--text-color) !important;
+    }
+
+    .chartjs-tooltip-key {
+      background-color: var(--text-color) !important;
+    }
+
+    canvas {
+      color: var(--text-color) !important;
+    }
+	
+	/* Forecast table styles - ensure text is visible in both themes */
+.forecast-table-container {
+  background-color: var(--panel-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-color); /* This ensures text color follows theme */
+}
+
+.forecast-table-container table {
+  color: var(--text-color) !important; /* Force text color */
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.forecast-table-container th,
+.forecast-table-container td {
+  color: var(--text-color) !important; /* Force text color */
+  border-bottom: 1px solid var(--border-color);
+}
+
+.forecast-table-container th {
+  color: var(--primary-color) !important; /* Headers use primary color */
+}
+
+.forecast-table-container tr:hover {
+  background-color: var(--input-bg);
+}
+  </style>
+</head>
+<body data-theme="dark">
+  <div class="top-bar">
+    <div class="logo">MartVV</div>
+    <div class="top-icons">
+      <span title="Search" class="top-icon">
+        <span class="icon">🔍</span>
+        <span class="label">Search</span>
+      </span>
+      <span title="Dashboard" class="top-icon">
+        <span class="icon">📊</span>
+        <span class="label">Dashboard</span>
+      </span>
+      <span title="Reports" class="top-icon">
+        <span class="icon">📁</span>
+        <span class="label">Reports</span>
+      </span>
+      <span title="Settings" class="top-icon">
+        <span class="icon">⚙️</span>
+        <span class="label">Settings</span>
+      </span>
+    </div>
+  </div>
+
+  <div class="container">
+    <h1>MartVV</h1>
+    <p class="tagline">Your smart assistant for stock market insights</p>
+
+    <!-- Updated Market Overview Section -->
+    <div class="market-overview">
+      <div class="market-header">
+        <div class="market-title">Market Overview</div>
+        <div class="market-time" id="marketTime"></div>
+      </div>
+      <div class="market-grid" id="marketContainer">
+        <!-- Market items will be added dynamically -->
+      </div>
+    </div>
+
+    <div class="search-section">
+      <input type="text" id="stockInput" placeholder="Enter Stock Symbol (e.g., AAPL)" />
+      <button onclick="onSearch()">Search</button>
+      <div class="refresh-button" id="refreshButton" title="Refresh Data">
+        <span class="icon">🔄</span>
+        <span class="label">Refresh</span>
+      </div>
+    </div>
+    <div class="auto-refresh-toggle">
+      <input type="checkbox" id="autoRefreshToggle">
+      <label for="autoRefreshToggle">Auto-refresh every 30 seconds</label>
+    </div>
+    <div id="error" class="error"></div>
+
+    <div class="main-grid">
+      <!-- 📌 Watchlist Panel -->
+      <div id="watchlist">
+        <h3>📌 Watchlist</h3>
+        <div class="watch-item" onclick="setSymbol('MSFT')">
+          <div><strong>MSFT</strong><p>Microsoft</p></div>
+          <div class="price-block"><span>$340.22</span><span class="up">+1.2%</span></div>
+        </div>
+        <div class="watch-item" onclick="setSymbol('GOOGL')">
+          <div><strong>GOOGL</strong><p>Alphabet</p></div>
+          <div class="price-block"><span>$138.45</span><span class="down">-0.4%</span></div>
+        </div>
+        <div class="watch-item" onclick="setSymbol('AMZN')">
+          <div><strong>AMZN</strong><p>Amazon</p></div>
+          <div class="price-block"><span>$178.00</span><span class="up">+3.1%</span></div>
+        </div>
+        <div class="watch-item" onclick="setSymbol('TSLA')">
+          <div><strong>TSLA</strong><p>Tesla</p></div>
+          <div class="price-block"><span>$245.78</span><span class="down">-2.1%</span></div>
+        </div>
+      </div>
+
+      <!-- 📈 Chart Area -->
+      <div id="chart-area">
+        <div class="tradingview-widget-container">
+          <div class="tradingview-widget-container__widget" id="tv-widget"></div>
+        </div>
+        <canvas id="drawCanvas" height="200"></canvas>
+      </div>
+
+      <!-- ✍️ Annotation & Trade Panel -->
+      <div id="annotation-panel">
+        <div class="trade-panel">
+          <h3>💰 Simulate Trade</h3>
+          <div class="trade-input-group">
+            <label for="tradeSymbol">Stock Symbol</label>
+            <input type="text" id="tradeSymbol" readonly />
+          </div>
+          <div class="trade-input-group">
+            <label for="tradeAmount">Investment Amount</label>
+            <input type="number" id="tradeAmount" placeholder="Enter USD amount" />
+          </div>
+          <div class="trade-buttons">
+            <button class="buy-button" onclick="simulateTrade('buy')">
+              <span>🟢</span> Buy
+            </button>
+            <button class="sell-button" onclick="simulateTrade('sell')">
+              <span>🔴</span> Sell
+            </button>
+          </div>
+          <div id="tradeResult" class="trade-result"></div>
+        </div>
+
+        <div class="panel-box" id="notesPanel">
+          <h3>🧠 Notes / Signals</h3>
+          <div class="signal-box buy-signal">
+            <strong id="buySignal">🟢 Buy Signal: AAPL @ $251.00</strong>
+          </div>
+          <div class="signal-box sell-signal">
+            <strong id="sellSignal">🔴 Sell Signal: AAPL @ $290.63</strong>
+          </div>
+          <div class="signal-box note-signal">
+            <strong id="personalNote">📝 Personal Note: Watch RSI &lt; 30 for AAPL</strong>
+          </div>
+        </div>
+      </div>
+    </div> <!-- End main-grid -->
+
+    <!-- 📊 Prediction Output - Updated Format -->
+    <div id="prediction" class="prediction-result">
+      <h2>Price Forecast for <span id="predSymbol">AAPL</span></h2>
+      
+      <div class="prediction-controls">
+        <label for="forecastDays">Forecast Period:</label>
+        <input type="number" id="forecastDays" min="1" max="30" value="7" style="width: 60px;">
+        <span>days</span>
+        <button onclick="generatePrediction(currentSymbol)">Update Forecast</button>
+      </div>
+      
+      <!-- Forecast table container -->
+      <div class="forecast-table-container">
+        <h3>Historical & Forecast Data</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Price</th>
+              <th>Type</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>May 31</td>
+              <td>$1.00</td>
+              <td>Historical</td>
+            </tr>
+            <tr>
+              <td>Jun 1</td>
+              <td>$0.80</td>
+              <td>Historical</td>
+            </tr>
+            <tr>
+              <td>Jun 2</td>
+              <td>$0.70</td>
+              <td>Historical</td>
+            </tr>
+            <tr>
+              <td>Jun 3</td>
+              <td>$0.60</td>
+              <td>Historical</td>
+            </tr>
+            <tr>
+              <td>Jun 4</td>
+              <td>$0.50</td>
+              <td>Historical</td>
+            </tr>
+            <tr>
+              <td>Jun 5</td>
+              <td>$0.40</td>
+              <td>Historical</td>
+            </tr>
+            <tr>
+              <td>Jun 6</td>
+              <td>$0.30</td>
+              <td>Current</td>
+            </tr>
+            <tr>
+              <td>Jun 7</td>
+              <td>$0.35</td>
+              <td>Forecast</td>
+            </tr>
+            <tr>
+              <td>Jun 8</td>
+              <td>$0.40</td>
+              <td>Forecast</td>
+            </tr>
+            <tr>
+              <td>Jun 9</td>
+              <td>$0.45</td>
+              <td>Forecast</td>
+            </tr>
+            <tr>
+              <td>Jun 10</td>
+              <td>$0.50</td>
+              <td>Forecast</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <div class="forecast-chart-container">
+        <canvas id="forecastChart"></canvas>
+      </div>
+      
+      <div class="prediction-details">
+        <div class="prediction-detail-card">
+          <h4>Current Price</h4>
+          <p>$<span id="lastPrice">141.80</span></p>
+        </div>
+        <div class="prediction-detail-card">
+          <h4>Predicted Price</h4>
+          <p>$<span id="nextPrice">142.31</span></p>
+        </div>
+        <div class="prediction-detail-card">
+          <h4>Trend</h4>
+          <p><span id="trendIndicator" class="trend-indicator">💤</span> <span id="trendText">Upward</span></p>
+        </div>
+        <div class="prediction-detail-card">
+          <h4>Confidence</h4>
+          <p><span id="confidenceValue">78</span>%</p>
+          <div class="confidence-meter">
+            <div class="confidence-level" id="confidenceMeter" style="width: 78%"></div>
+          </div>
+        </div>
+      </div>
+      
+      <p><small>Last updated: <span id="lastUpdated"></span></small></p>
+    </div>
+
+    <!-- 📝 Notes Memory Section -->
+    <div class="panel-box">
+      <h3>📝 Your Notes</h3>
+      <textarea id="userNote" placeholder="Write notes or strategy here..." rows="6" style="width:100%;padding:10px;background-color:var(--panel-color);color:var(--text-color);border-radius:6px;border:1px solid var(--border-color);resize: vertical;"></textarea>
+      <div style="margin-top:10px;">
+        <button onclick="saveNote()">💾 Save</button>
+        <button onclick="loadNote()">📥 Load</button>
+        <button onclick="clearNote()">🗑️ Clear</button>
+      </div>
+    </div>
+
+    <!-- 📥 Download Prediction -->
+    <div class="panel-box">
+      <h3>📤 Export Prediction Report</h3>
+      <button onclick="downloadPrediction()">⬇️ Download as TXT</button>
+      <button onclick="downloadChartImage()" style="margin-left: 10px;">🖼️ Save Chart Image</button>
+    </div>
+  </div> <!-- End container -->
+
+  <!-- 🌓 Theme Toggle Button -->
+  <div class="theme-toggle" onclick="toggleTheme()">🌓 Theme</div>
+  
+  <!-- Educational Disclaimer Footer -->
+  <footer class="educational-footer">
+    <p><strong>TWT6223 - Web Techniques and Applications | Academic Project 2025</strong></p>
+    <p>⚠️ This is a simulated Stock Analysis Web Application platform for educational purposes only. None of the data represents real market conditions.</p>
+    <p>This application is part of a university assignment and should not be used for actual investment decisions.</p>
+    <div class="checkbox">
+      <input type="checkbox" id="understandCheckbox">
+      <label for="understandCheckbox">I understand this is not a real stock analysis platform</label>
+    </div>
+  </footer>
+  
+<script>
+  let currentSymbol = "AAPL";
+  let autoRefreshInterval = null;
+  let lastRefreshTime = null;
+  let forecastChart = null;
+
+  // Updated Market Data
+  const marketData = [
+    { name: "S&P 500", value: "5,952.40", change: "+0.26%", changeValue: "+15.30", direction: "up", sector: "US Index" },
+    { name: "NASDAQ", value: "21,612.10", change: "+0.45%", changeValue: "+98.30", direction: "up", sector: "US Index" },
+    { name: "DOW 30", value: "39,127.80", change: "-0.12%", changeValue: "-45.60", direction: "down", sector: "US Index" },
+    { name: "Gold", value: "2,350.20", change: "+0.32%", changeValue: "+7.50", direction: "up", sector: "Commodities" },
+    { name: "Crude Oil", value: "78.45", change: "+1.12%", changeValue: "+0.87", direction: "up", sector: "Commodities" },
+    { name: "USD/JPY", value: "160.85", change: "-0.08%", changeValue: "-0.13", direction: "down", sector: "Forex" },
+    { name: "EUR/USD", value: "1.1436", change: "+0.16%", changeValue: "+0.0018", direction: "up", sector: "Forex" },
+    { name: "Bitcoin", value: "62,450", change: "+2.15%", changeValue: "+1,315.00", direction: "up", sector: "Crypto" }
+  ];
+
+  function updateMarketOverview() {
+    const container = document.getElementById('marketContainer');
+    container.innerHTML = '';
+    
+    marketData.forEach(item => {
+      const marketItem = document.createElement('div');
+      marketItem.className = 'market-item';
+      
+      marketItem.innerHTML = `
+        <div class="market-name">${item.name}</div>
+        <div class="market-value">${item.value}</div>
+        <div class="market-change ${item.direction}">
+          <span class="change-icon">${item.direction === 'up' ? '▲' : '▼'}</span>
+          ${item.change} (${item.changeValue})
+        </div>
+        <div class="market-sector">${item.sector}</div>
+      `;
+      
+      container.appendChild(marketItem);
+    });
+    
+    // Update market time
+    const now = new Date();
+    document.getElementById('marketTime').textContent = `Last updated: ${now.toLocaleTimeString()}`;
+  }
+
+  function toggleTheme() {
+    const body = document.body;
+    const isLight = body.getAttribute("data-theme") === "light";
+    body.setAttribute("data-theme", isLight ? "dark" : "light");
+    
+    // Reload the chart with the new theme
+    if (currentSymbol) {
+      loadChart(currentSymbol);
+      updateForecastChart(); // Also update forecast chart with new theme
+    }
+  }
+
+  function saveNote() {
+    const note = document.getElementById("userNote").value;
+    localStorage.setItem("martvv_note", note);
+    alert("✅ Note saved.");
+  }
+
+  function loadNote() {
+    const note = localStorage.getItem("martvv_note") || "";
+    document.getElementById("userNote").value = note;
+    alert("📥 Note loaded.");
+  }
+
+  function clearNote() {
+    localStorage.removeItem("martvv_note");
+    document.getElementById("userNote").value = "";
+    alert("🗑️ Note cleared.");
+  }
+
+  function downloadPrediction() {
+    const note = document.getElementById("userNote").value;
+    const content = `MartVV Prediction Report\n\nSymbol: ${currentSymbol}\nLast Price: ${document.getElementById("lastPrice").textContent}\nNext Price: ${document.getElementById("nextPrice").textContent}\nTrend: ${document.getElementById("trendText").textContent}\n\nNote: ${note}`;
+    const blob = new Blob([content], { type: "text/plain" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `MartVV_${currentSymbol}_report.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+  
+  function downloadChartImage() {
+    const link = document.createElement('a');
+    link.download = `MartVV_${currentSymbol}_forecast.png`;
+    link.href = document.getElementById('forecastChart').toDataURL('image/png');
+    link.click();
+  }
+
+  function onSearch() {
+    const input = document.getElementById("stockInput").value.toUpperCase().trim();
+    const error = document.getElementById("error");
+    error.textContent = "";
+
+    if (!input || !/^[A-Z.]+$/.test(input)) {
+      error.textContent = "❌ Invalid stock symbol. Try AAPL, MSFT, etc.";
+      return;
+    }
+
+    currentSymbol = input;
+    refreshData();
+  }
+
+  function refreshData() {
+    // Show loading animation
+    const refreshBtn = document.getElementById("refreshButton");
+    refreshBtn.classList.add("active");
+    
+    // Update the chart, prediction, and signals
+    document.getElementById("tradeSymbol").value = currentSymbol;
+    document.getElementById("predSymbol").textContent = currentSymbol;
+    loadChart(currentSymbol);
+    generatePrediction(currentSymbol);
+    updateMarkers(currentSymbol);
+    updateMarketOverview(); // Update market overview data too
+    
+    // Update last refresh time
+    lastRefreshTime = new Date();
+    document.getElementById("lastUpdated").textContent = lastRefreshTime.toLocaleTimeString();
+    
+    // Remove loading animation after a short delay
+    setTimeout(() => {
+      refreshBtn.classList.remove("active");
+    }, 1000);
+  }
+
+  function loadChart(symbol = "AAPL") {
+    const container = document.querySelector(".tradingview-widget-container");
+    container.innerHTML = '<div class="tradingview-widget-container__widget" id="tv-widget"></div>';
+
+    const isLightTheme = document.body.getAttribute("data-theme") === "light";
+    
+    const script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
+    script.async = true;
+    script.innerHTML = JSON.stringify({
+      autosize: true,
+      symbol: "NASDAQ:" + symbol,
+      interval: "D",
+      timezone: "Etc/UTC",
+      theme: isLightTheme ? "light" : "dark",
+      style: "1",
+      locale: "en",
+      backgroundColor: isLightTheme ? "#f4f7fc" : "#0b1120",
+      withdateranges: true,
+      hide_side_toolbar: false,
+      allow_symbol_change: true,
+      studies: ["MACD@tv-basicstudies", "RSI@tv-basicstudies", "Volume@tv-basicstudies"],
+      support_host: "https://www.tradingview.com",
+      toolbar_bg: isLightTheme ? "#f4f7fc" : "#0b1120",
+      overrides: {
+        "paneProperties.background": isLightTheme ? "#f4f7fc" : "#0b1120",
+        "paneProperties.vertGridProperties.color": isLightTheme ? "#e2e8f0" : "#1e293b",
+        "paneProperties.horzGridProperties.color": isLightTheme ? "#e2e8f0" : "#1e293b",
+        "symbolWatermarkProperties.transparency": 90,
+        "scalesProperties.textColor": isLightTheme ? "#1e293b" : "#f8fafc"
+      }
+    });
+
+    container.appendChild(script);
+  }
+
+  function generatePrediction(symbol) {
+    const forecastDays = parseInt(document.getElementById('forecastDays').value) || 7;
+    
+    // Simulate slight price changes for realism
+    const data = {
+      AAPL: { last: 141.80 + (Math.random() * 2 - 1), next: 142.31 + (Math.random() * 2 - 1), trend: Math.random() > 0.3 ? "up" : "down" },
+      MSFT: { last: 340.22 + (Math.random() * 3 - 1.5), next: 342.50 + (Math.random() * 3 - 1.5), trend: Math.random() > 0.4 ? "up" : "down" },
+      GOOGL: { last: 138.45 + (Math.random() * 2 - 1), next: 137.80 + (Math.random() * 2 - 1), trend: Math.random() > 0.5 ? "up" : "down" },
+      TSLA: { last: 245.78 + (Math.random() * 5 - 2.5), next: 242.50 + (Math.random() * 5 - 2.5), trend: Math.random() > 0.6 ? "up" : "down" },
+      AMZN: { last: 178.00 + (Math.random() * 3 - 1.5), next: 180.25 + (Math.random() * 3 - 1.5), trend: Math.random() > 0.4 ? "up" : "down" }
+    };
+    
+    const stockData = data[symbol] || {
+      last: (100 + Math.random() * 200).toFixed(2),
+      next: (100 + Math.random() * 200).toFixed(2),
+      trend: Math.random() > 0.5 ? "up" : "down"
+    };
+    
+    document.getElementById("lastPrice").textContent = stockData.last.toFixed(2);
+    document.getElementById("nextPrice").textContent = stockData.next.toFixed(2);
+    
+    const trendIndicator = document.getElementById("trendIndicator");
+    const trendText = document.getElementById("trendText");
+    
+    if (stockData.trend === "up") {
+      trendIndicator.textContent = "📈";
+      trendText.textContent = "Upward";
+      trendText.style.color = "var(--success)";
+    } else {
+      trendIndicator.textContent = "📉";
+      trendText.textContent = "Downward";
+      trendText.style.color = "var(--danger)";
+    }
+    
+    // Generate confidence value (70-90% for known stocks, 50-80% for others)
+    const confidence = symbol in data ? 
+      Math.floor(70 + Math.random() * 20) : 
+      Math.floor(50 + Math.random() * 30);
+    
+    document.getElementById("confidenceValue").textContent = confidence;
+    document.getElementById("confidenceMeter").style.width = confidence + "%";
+    
+    // Update forecast chart
+    updateForecastChart(symbol, stockData.last, stockData.next, forecastDays);
+  }
+  
+  function updateForecastChart(symbol = currentSymbol, currentPrice, predictedPrice, days = 7) {
+    const ctx = document.getElementById('forecastChart').getContext('2d');
+    
+    // Generate historical data (last 7 days)
+    const historicalDates = [];
+    const historicalPrices = [];
+    const today = new Date();
+    
+    for (let i = -6; i <= 0; i++) {
+      const date = new Date(today);
+      date.setDate(date.getDate() + i);
+      historicalDates.push(date);
+      
+      // Generate random prices around the current price
+      const price = currentPrice + (Math.random() * 5 - 2.5);
+      historicalPrices.push(price);
+    }
+    
+    // Generate forecast data (next X days)
+    const forecastDates = [];
+    const forecastPrices = [];
+    const priceChange = predictedPrice - currentPrice;
+    
+    for (let i = 1; i <= days; i++) {
+      const date = new Date(today);
+      date.setDate(date.getDate() + i);
+      forecastDates.push(date);
+      
+      // Calculate price with some randomness
+      const progress = i / days;
+      const basePrice = currentPrice + (priceChange * progress);
+      const randomFactor = 1 + (Math.random() * 0.02 - 0.01); // ±1% randomness
+      forecastPrices.push(basePrice * randomFactor);
+    }
+    
+    // Destroy previous chart if it exists
+    if (forecastChart) {
+      forecastChart.destroy();
+    }
+    
+    // Create new chart
+    forecastChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [...historicalDates.map(d => moment(d).format('MMM D')), ...forecastDates.map(d => moment(d).format('MMM D'))],
+        datasets: [
+          {
+            label: 'Historical Prices',
+            data: historicalPrices,
+            borderColor: 'rgba(75, 192, 192, 1)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            tension: 0.4,
+            fill: false,
+            pointRadius: 3
+          },
+          {
+            label: 'Forecast Prices',
+            data: [...Array(historicalDates.length).fill(null), ...forecastPrices],
+            borderColor: 'rgba(255, 99, 132, 1)',
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            borderDash: [5, 5],
+            tension: 0.4,
+            fill: false,
+            pointRadius: 3
+          },
+          {
+            label: 'Current Price',
+            data: [...Array(historicalDates.length - 1).fill(null), currentPrice, ...Array(forecastDates.length).fill(null)],
+            borderColor: 'rgba(54, 162, 235, 1)',
+            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            borderWidth: 2,
+            pointRadius: 0,
+            borderDash: [3, 3]
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: {
+              color: 'var(--text-color)'
+            }
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            callbacks: {
+              label: function(context) {
+                return context.dataset.label + ': $' + context.raw.toFixed(2);
+              }
+            },
+            bodyColor: 'var(--text-color)',
+            titleColor: 'var(--text-color)',
+            footerColor: 'var(--text-color)'
+          }
+        },
+        scales: {
+          x: {
+            grid: {
+              color: 'var(--border-color)'
+            },
+            ticks: {
+              color: 'var(--text-muted)'
+            }
+          },
+          y: {
+            grid: {
+              color: 'var(--border-color)'
+            },
+            ticks: {
+              color: 'var(--text-muted)',
+              callback: function(value) {
+                return '$' + value.toFixed(2);
+              }
+            }
+          }
+        },
+        elements: {
+          line: {
+            borderWidth: 2
+          }
+        }
+      }
+    });
+  }
+
+  function updateMarkers(symbol) {
+    const base = Math.random() * (300 - 100) + 100;
+    document.getElementById("buySignal").textContent = `🟢 Buy Signal: ${symbol} @ $${(base * 0.95).toFixed(2)}`;
+    document.getElementById("sellSignal").textContent = `🔴 Sell Signal: ${symbol} @ $${(base * 1.1).toFixed(2)}`;
+    document.getElementById("personalNote").textContent = `📝 Watch RSI < 30 for ${symbol}`;
+  }
+
+  function simulateTrade(type) {
+    const amt = parseFloat(document.getElementById("tradeAmount").value);
+    const div = document.getElementById("tradeResult");
+    if (isNaN(amt) || amt <= 0) {
+      div.textContent = "❗ Please enter a valid amount.";
+      return;
+    }
+    div.textContent = `${type === 'buy' ? '🟢 Bought' : '🔴 Sold'} $${amt.toFixed(2)} of ${currentSymbol}`;
+  }
+
+  function setSymbol(symbol) {
+    document.getElementById("stockInput").value = symbol;
+    onSearch();
+  }
+
+  // Toggle auto-refresh
+  function toggleAutoRefresh() {
+    const toggle = document.getElementById("autoRefreshToggle");
+    if (toggle.checked) {
+      // Start auto-refresh
+      autoRefreshInterval = setInterval(refreshData, 30000); // 30 seconds
+      refreshData(); // Refresh immediately when enabled
+    } else {
+      // Stop auto-refresh
+      if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+      }
+    }
+  }
+
+  // ✍️ Canvas Drawing Tool
+  const canvas = document.getElementById("drawCanvas");
+  const ctx = canvas.getContext("2d");
+  let drawing = false;
+
+  canvas.addEventListener("mousedown", () => {
+    drawing = true;
+    ctx.beginPath();
+  });
+  canvas.addEventListener("mouseup", () => drawing = false);
+  canvas.addEventListener("mousemove", (e) => {
+    if (drawing) {
+      const rect = canvas.getBoundingClientRect();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "#00e676";
+      ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+      ctx.stroke();
+    }
+  });
+
+  // ✅ Auto-load on page load
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("stockInput").value = currentSymbol;
+    document.getElementById("tradeSymbol").value = currentSymbol;
+    document.getElementById("predSymbol").textContent = currentSymbol;
+    refreshData();
+    updateMarketOverview();
+    
+    // Setup refresh button
+    document.getElementById("refreshButton").addEventListener("click", refreshData);
+    
+    // Setup auto-refresh toggle
+    document.getElementById("autoRefreshToggle").addEventListener("change", toggleAutoRefresh);
+    
+    // Set initial last updated time
+    lastRefreshTime = new Date();
+    document.getElementById("lastUpdated").textContent = lastRefreshTime.toLocaleTimeString();
+    
+    // Initialize forecast chart with empty data
+    updateForecastChart();
+  });
+  
+  // Disclaimer checkbox functionality
+  document.getElementById('understandCheckbox').addEventListener('change', function() {
+    if(this.checked) {
+      localStorage.setItem('disclaimerAccepted', 'true');
+    } else {
+      localStorage.removeItem('disclaimerAccepted');
+    }
+  });
+
+  // Check saved preference on load
+  if(localStorage.getItem('disclaimerAccepted')) {
+    document.getElementById('understandCheckbox').checked = true;
+  }
+</script>
+</body>
+</html>
